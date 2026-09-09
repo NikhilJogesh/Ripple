@@ -6,7 +6,7 @@ export type SimulationPhase = "idle" | "running" | "paused" | "complete"
 
 export type ScenarioCategory = "INFRASTRUCTURE" | "WEATHER" | "OPERATIONS" | "CAPACITY" | "TRANSPORT"
 
-export type ScenarioKind = "building-closure" | "transport-capacity" | "weather-event" | "campus-event" | "network-disruption"
+export type ScenarioKind = "building-closure" | "transport-capacity" | "weather-event" | "campus-event" | "network-disruption" | "power-disruption" | "examination-surge"
 
 export type AffectedSystem = "classes" | "rooms" | "students" | "faculty" | "transport"
 
@@ -176,6 +176,7 @@ export type DecisionBranchResult = {
   stability: number
   roomUtilization: number
   transportLoad: number
+  operationalCost: number
 }
 
 export type DecisionBranch = {
@@ -190,4 +191,172 @@ export type DecisionSession = {
   branches: DecisionBranch[]
   activeBranchId: string | null
   selectedBranchIds: string[]
+}
+
+export type Campus = {
+  id: string
+  name: string
+  timezone: string
+  buildingIds: string[]
+  routeIds: string[]
+  sourceIds: string[]
+}
+
+export type StudentPopulation = {
+  id: string
+  label: string
+  count: number
+  primaryBuildingIds: string[]
+}
+
+export type FacultyPopulation = {
+  id: string
+  label: string
+  count: number
+  department: string
+  primaryBuildingIds: string[]
+}
+
+export type CourseClass = {
+  id: string
+  courseCode: string
+  title: string
+  studentCount: number
+  facultyPopulationId: string
+  buildingId: string
+  roomId: string
+}
+
+export type TimetableAllocation = {
+  id: string
+  classId: string
+  roomId: string
+  startTime: string
+  endTime: string
+  status: "scheduled" | "compatible" | "displaced"
+}
+
+export type TransportRoute = {
+  id: string
+  name: string
+  zone: string
+  capacity: number
+  baselineLoad: number
+  connectedBuildingIds: string[]
+}
+
+export type InfrastructureAsset = {
+  id: string
+  name: string
+  type: "power" | "network" | "water" | "access"
+  status: "operational" | "standby" | "monitored"
+  connectedBuildingIds: string[]
+}
+
+export type CampusEvent = {
+  id: string
+  name: string
+  area: string
+  startTime: string
+  endTime: string
+  demandMultiplier: number
+}
+
+export type WeatherCondition = {
+  id: string
+  label: string
+  affectedArea: string
+  severity: number
+  routeIds: string[]
+}
+
+export type OccupancySignal = {
+  id: string
+  buildingId: string
+  observedUtilization: number
+  capturedAt: string
+  quality: number
+}
+
+export type OperationalDependency = {
+  id: string
+  sourceType: "building" | "room" | "class" | "route" | "asset"
+  sourceId: string
+  targetType: "building" | "room" | "class" | "route" | "asset"
+  targetId: string
+  relationship: "hosts" | "serves" | "depends-on" | "connects"
+}
+
+export type DataSourceMetadata = {
+  id: string
+  name: string
+  status: "prototype-connected" | "connector-ready"
+  recordCount: number
+  freshness: string
+  coverage: string
+  quality: number
+}
+
+export type CampusTwin = {
+  campus: Campus
+  studentPopulations: StudentPopulation[]
+  facultyPopulations: FacultyPopulation[]
+  classes: CourseClass[]
+  timetableAllocations: TimetableAllocation[]
+  transportRoutes: TransportRoute[]
+  infrastructureAssets: InfrastructureAsset[]
+  campusEvents: CampusEvent[]
+  weatherConditions: WeatherCondition[]
+  occupancySignals: OccupancySignal[]
+  dependencies: OperationalDependency[]
+  dataSources: DataSourceMetadata[]
+}
+
+export type PredictionDirection = "up" | "down" | "stable"
+
+export type PredictionSignalMetric = "room-pressure" | "student-movement" | "faculty-conflict" | "transport-load" | "campus-stability"
+
+export type PredictiveSignal = {
+  metric: PredictionSignalMetric
+  label: string
+  baseline: number
+  projected: number
+  delta: number
+  unit: "percent" | "students" | "conflicts"
+  direction: PredictionDirection
+  severity: Severity
+  confidence: number
+  contributors: string[]
+  horizon: string
+}
+
+export type PredictiveModelSource = "local-neural-network" | "deterministic-fallback"
+
+export type NeuralInferenceOutput = {
+  projectedRoomUtilization: number
+  projectedTransportLoad: number
+  projectedStudentMovement: number
+  projectedFacultyConflicts: number
+  projectedStability: number
+  projectedRecoveryHours: number
+}
+
+export type NeuralInference = {
+  source: PredictiveModelSource
+  modelLabel: string
+  output: NeuralInferenceOutput
+  confidence: number
+  confidenceBasis: string
+  latencyMs: number
+  fallbackReason?: string
+}
+
+export type PredictiveResult = {
+  signals: PredictiveSignal[]
+  neuralSignals: PredictiveSignal[]
+  confidence: number
+  primaryUncertainty: string
+  projectedMetrics: Pick<CampusMetrics, "roomUtilization" | "affectedStudents" | "conflicts" | "transportLoad" | "campusStability">
+  inferenceProjectedMetrics: Pick<CampusMetrics, "roomUtilization" | "affectedStudents" | "conflicts" | "transportLoad" | "campusStability">
+  inference: NeuralInference
 }

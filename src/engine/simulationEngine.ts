@@ -11,6 +11,7 @@ import type {
   Scenario,
   SimulationEvent,
   SimulationResult,
+  ScenarioKind,
 } from "@/types"
 
 const eventDefinitions = [
@@ -22,6 +23,27 @@ const eventDefinitions = [
   { minuteOffset: 24, title: "Transport load increasing", description: "Cross-campus movement adds pressure to the shuttle loop.", nodeId: "transport-load", severity: "high" as const },
   { minuteOffset: 31, title: "Campus stability decreasing", description: "The cascade crosses the high-pressure threshold.", nodeId: "campus-stability", severity: "critical" as const },
 ]
+
+const scenarioEventNarratives: Partial<Record<ScenarioKind, { title: string; description: string }[]>> = {
+  "power-disruption": [
+    { title: "Power availability constrained", description: "The central power loop is operating below the required availability for the simulation window." },
+    { title: "Facility capacity degraded", description: "Power-dependent teaching capacity is released or constrained across connected facilities." },
+    { title: "Room pressure rising", description: "Compatible powered rooms begin absorbing displaced demand." },
+    { title: "Student redistribution", description: "Movement increases as classes shift toward available powered facilities." },
+    { title: "Operational conflicts detected", description: "Several assignments exceed faculty, time and facility constraints." },
+    { title: "Transport load increasing", description: "Cross-campus movement adds pressure to the connected shuttle routes." },
+    { title: "Campus stability decreasing", description: "The power cascade crosses the high-pressure threshold." },
+  ],
+  "examination-surge": [
+    { title: "Exam demand surge active", description: "The examination window is creating a concentrated demand increase across the campus schedule." },
+    { title: "Exam sessions competing", description: "Assessment sessions compete for compatible rooms and faculty time windows." },
+    { title: "Room pressure rising", description: "Available rooms begin absorbing the examination demand surge." },
+    { title: "Student redistribution", description: "Student movement increases between examination and support areas." },
+    { title: "Scheduling pressure detected", description: "Faculty and room assignments begin to exceed available time and resource constraints." },
+    { title: "Transport load increasing", description: "Peak examination movement adds pressure to the connected shuttle routes." },
+    { title: "Campus stability decreasing", description: "The examination surge crosses the high-pressure threshold." },
+  ],
+}
 
 function addMinutesToTime(time: string, offset: number): string {
   const [hours, minutes] = time.split(":").map(Number)
@@ -89,8 +111,8 @@ function createEventList(scenario: Scenario, closedBuilding: Building): Simulati
     id: `event-${index + 1}`,
     minuteOffset: event.minuteOffset,
     timeLabel: addMinutesToTime(startTime, event.minuteOffset),
-    title: addScenarioLabel(event, scenario, closedBuilding),
-    description: event.nodeId === "building-failure" ? `${scenario.kind === "building-closure" ? "Closure" : "Constraint"} confirmed for the ${startTime}–${endTime} window.` : event.description,
+    title: scenarioEventNarratives[scenario.kind ?? "building-closure"]?.[index]?.title ?? addScenarioLabel(event, scenario, closedBuilding),
+    description: scenarioEventNarratives[scenario.kind ?? "building-closure"]?.[index]?.description ?? (event.nodeId === "building-failure" ? `${scenario.kind === "building-closure" ? "Closure" : "Constraint"} confirmed for the ${startTime}–${endTime} window.` : event.description),
     nodeId: event.nodeId,
     severity: event.severity,
   }))
@@ -105,7 +127,7 @@ function clamp(value: number, min: number, max: number): number {
 function scenarioImpactFactor(scenario: Scenario): number {
   const severityFactor = clamp((scenario.severity ?? defaultScenario.severity ?? 72) / 72, 0.2, 1.5)
   const durationFactor = Math.max(0.25, scenario.durationHours / 6)
-  const kindFactor = scenario.kind === "transport-capacity" ? 0.38 : scenario.kind === "weather-event" ? 0.62 : scenario.kind === "campus-event" ? 0.72 : scenario.kind === "network-disruption" ? 0.48 : 1
+  const kindFactor = scenario.kind === "transport-capacity" ? 0.38 : scenario.kind === "weather-event" ? 0.62 : scenario.kind === "campus-event" ? 0.72 : scenario.kind === "network-disruption" ? 0.48 : scenario.kind === "power-disruption" ? 0.78 : scenario.kind === "examination-surge" ? 0.72 : 1
   const systems = scenario.affectedSystems ?? allSystems
   const classFactor = systems.includes("classes") ? 1 : 0.3
   return severityFactor * durationFactor * kindFactor * classFactor
@@ -116,8 +138,8 @@ function deriveOperationalMetrics(scenario: Scenario, displacedStudents: number,
   const severityFactor = clamp((scenario.severity ?? defaultScenario.severity ?? 72) / 72, 0.2, 1.5)
   const durationFactor = Math.max(0.25, scenario.durationHours / 6)
   const base = deriveScenarioMetrics(baselineMetrics, displacedStudents, closedBuilding.scheduledStudents)
-  const transportBonus = scenario.kind === "transport-capacity" ? Math.round(15 * severityFactor) : scenario.kind === "weather-event" ? Math.round(8 * severityFactor) : scenario.kind === "campus-event" ? Math.round(5 * severityFactor) : 0
-  const roomBonus = scenario.kind === "campus-event" ? Math.round(5 * severityFactor) : scenario.kind === "weather-event" ? Math.round(3 * severityFactor) : 0
+  const transportBonus = scenario.kind === "transport-capacity" ? Math.round(15 * severityFactor) : scenario.kind === "weather-event" ? Math.round(8 * severityFactor) : scenario.kind === "campus-event" ? Math.round(5 * severityFactor) : scenario.kind === "power-disruption" ? Math.round(6 * severityFactor) : scenario.kind === "examination-surge" ? Math.round(9 * severityFactor) : 0
+  const roomBonus = scenario.kind === "campus-event" ? Math.round(5 * severityFactor) : scenario.kind === "weather-event" ? Math.round(3 * severityFactor) : scenario.kind === "power-disruption" ? Math.round(6 * severityFactor) : scenario.kind === "examination-surge" ? Math.round(8 * severityFactor) : 0
   const transportLoad = systems.includes("transport") ? base.transportLoad + transportBonus : baselineMetrics.transportLoad + Math.round((base.transportLoad - baselineMetrics.transportLoad) * 0.25)
   const roomUtilization = systems.includes("rooms") ? base.roomUtilization + roomBonus : baselineMetrics.roomUtilization + Math.round((base.roomUtilization - baselineMetrics.roomUtilization) * 0.25)
   const conflicts = systems.includes("faculty") ? base.conflicts : Math.round(base.conflicts * 0.22)

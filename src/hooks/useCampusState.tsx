@@ -2,7 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { createInitialState, runSimulation } from "@/engine/simulationEngine"
-import { applyDecisionResultToMetrics, backtrackDecision as backtrackDecisionSession, branchIdForCandidate, markDecisionBranchComplete, markDecisionBranchRunning, selectDecisionBranch as selectBranchSession, toggleDecisionBranch as toggleBranchSession } from "@/lib/decisionSession"
+import { applyDecisionResultToMetrics, backtrackDecision as backtrackDecisionSession, branchIdForCandidate, createDecisionSession as createDecisionSessionForScenario, markDecisionBranchComplete, markDecisionBranchRunning, selectDecisionBranch as selectBranchSession, toggleDecisionBranch as toggleBranchSession } from "@/lib/decisionSession"
+import { validateScenario } from "@/lib/scenarioConfiguration"
 import type { CampusState, DecisionCandidate, Scenario, SimulationPhase } from "@/types"
 
 type CampusStateContextValue = {
@@ -54,11 +55,13 @@ export function CampusStateProvider({ children }: { children: React.ReactNode })
       phaseRef.current = "idle"
       setState((current) => {
         const baseline = createInitialState()
+        const scenario = { ...baseline.scenario, ...patch }
         return {
           ...baseline,
           selectedBuildingId: current.selectedBuildingId,
           scenarioHistory: current.scenarioHistory,
-          scenario: { ...baseline.scenario, ...patch },
+          scenario,
+          decisionSession: createDecisionSessionForScenario(scenario),
         }
       })
       return
@@ -67,7 +70,7 @@ export function CampusStateProvider({ children }: { children: React.ReactNode })
     setState((current) => ({
       ...current,
       scenario: { ...current.scenario, ...patch },
-      decisionSession: createInitialState().decisionSession,
+      decisionSession: createDecisionSessionForScenario({ ...current.scenario, ...patch }),
     }))
   }, [clearTimers])
 
@@ -80,10 +83,12 @@ export function CampusStateProvider({ children }: { children: React.ReactNode })
     phaseRef.current = "idle"
     setState((current) => {
       const baseline = createInitialState()
+      const nextScenario = { ...baseline.scenario, ...scenario, affectedSystems: [...(scenario.affectedSystems ?? baseline.scenario.affectedSystems ?? [])] }
       return {
         ...baseline,
         selectedBuildingId: scenario.buildingId,
-        scenario: { ...baseline.scenario, ...scenario, affectedSystems: [...(scenario.affectedSystems ?? baseline.scenario.affectedSystems ?? [])] },
+        scenario: nextScenario,
+        decisionSession: createDecisionSessionForScenario(nextScenario),
         scenarioHistory: current.scenarioHistory,
       }
     })
@@ -137,7 +142,7 @@ export function CampusStateProvider({ children }: { children: React.ReactNode })
           recommendedIntervention: "Dynamic Reallocation",
         } : null
         setState((current) => {
-          const nextDecisionSession = isLast && decisionBranchId ? markDecisionBranchComplete(current.decisionSession, decisionBranchId) : current.decisionSession
+          const nextDecisionSession = isLast && decisionBranchId ? markDecisionBranchComplete(current.decisionSession, decisionBranchId, current.scenario) : current.decisionSession
           const branchResult = decisionBranchId ? nextDecisionSession.branches.find((branch) => branch.id === decisionBranchId)?.result : undefined
           const displayedMetrics = branchResult ? applyDecisionResultToMetrics(snapshot.metrics, branchResult) : snapshot.metrics
           const displayedHistoryEntry = historyEntry ? { ...historyEntry, stabilityAfter: displayedMetrics.campusStability, affectedStudents: displayedMetrics.affectedStudents } : null
@@ -160,6 +165,7 @@ export function CampusStateProvider({ children }: { children: React.ReactNode })
   const simulate = useCallback(() => {
     const phase = phaseRef.current
     if (phase === "running" || phase === "complete") return
+    if (!validateScenario(state.scenario).valid) return
     if (phase === "paused" && resultRef.current) {
       phaseRef.current = "running"
       scheduleSnapshots(resultRef.current, state.activeSnapshotIndex + 1)

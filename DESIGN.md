@@ -89,9 +89,11 @@ Primary actions use blue fill with dark text only where contrast remains strong;
 
 ### Navigation and data display
 
-Focus navigation is action-led: “What decision do you want to test?” → configure → Simulate → result → Explore Decisions / WHY / Compare / Explore system. Decision navigation is branch-led: choose a future → simulate → backtrack → compare selected branches → read WHY. Operations navigation is anchor-based so the full decision can be followed quickly. The scenario library and What If panel make inputs legible before a run. KPI values use mono type and fixed-width labels. Comparison uses a semantic table on desktop and focused metric rows in Focus. The intervention studio owns Compare, Optimize, WHY, and the decision brief; Optimize leads with the lowest-risk insight, then mechanism, evidence, intervention name, and score.
+Focus navigation is action-led: “What decision do you want to test?” → configure → Simulate → result → Explore Decisions / WHY / Compare / Explore system. Decision navigation is future-led: one scenario → choose an intervention → explore a projected future → backtrack → revisit a sibling path → compare → read WHY → human review. Operations navigation is anchor-based so the full decision can be followed quickly. The scenario library and What If panel make inputs legible before a run. KPI values use mono type and fixed-width labels. Comparison uses a semantic table on desktop and focused metric rows in Focus. The intervention studio owns Compare, Optimize, WHY, and the decision brief; Optimize leads with the lowest-risk insight, then mechanism, evidence, intervention name, score, and the operator handoff.
 
 The Operations header is a four-zone grid: brand, primary section navigation, view mode, and runtime controls. At medium widths the zones move onto explicit rows; at narrow widths the header becomes a stacked, wrapped layout with no horizontal navigation scroller.
+
+The Decision surface is a Future Lab, not a dashboard of candidate cards. Each intervention card exposes its mechanism and a small projected outcome preview before exploration. A completed branch is retained as history, a selected branch is the current projected state, and “Choose another future” makes sibling exploration explicit. The compare table highlights the preferred direction per metric rather than treating every number as “higher is better”.
 
 ### Forms and overlays
 
@@ -105,9 +107,17 @@ The MVP uses compact text markers, geometric SVG marks, and simple CSS indicator
 
 Motion communicates propagation: 150–300ms ripple activation, 300–500ms panel/map transitions, and no continuous loops. Reduced motion disables transitions while retaining the same state and event order. Reset invalidates every outstanding timer.
 
+### Decision intelligence flow
+
+The decision story follows `Scenario → Prediction → Ripple → Intervention → Future → Compare → Recommendation → Human Review`. The ripple rail is an explorable causal instrument: each node can reveal a short “what changed / why” explanation derived from current metrics. Recommendation copy leads with the mechanism and evidence, then shows the prototype score and trade-off. “Ready for human review” is an explicit handoff; RIPPLE never implies autonomous approval.
+
+The Operations layer is the handoff from decision to understanding. Its Digital Twin uses the same campus records to show structure—what a building hosts, which rooms absorb demand, how student movement loads transport, and how transport pressures stability—while the Ripple rail shows when those consequences activate. The Decision Brief is the durable summary of that path: current baseline → projected future → operational impact → trade-off → human review. The selected future is always labelled separately from the campus baseline.
+
 ### Content and data visualization
 
 Copy is direct and operational: “Close building”, “Run simulation”, “Compare futures”, “Back to decision”, and “Why this decision?”. Scenario presets, impact, trust, and local history are supporting surfaces rather than competing dashboards. Synthetic analysis is visibly labelled. Numbers use comma grouping, percent suffixes, and mono type.
+
+Operational impact is a compact seven-dimension readout, not a second KPI dashboard. People, faculty, time, stability, mobility, cost, and complexity are derived from the selected deterministic candidate and its Do Nothing baseline. The Decision Brief can be copied as plain text or printed from the browser; no export chrome or document workflow is introduced.
 
 ## Do's and Don'ts
 
@@ -115,6 +125,16 @@ Copy is direct and operational: “Close building”, “Run simulation”, “C
 - **Do:** Keep every displayed operational value connected to deterministic state or clearly labelled controlled analysis; Decision candidate outcomes are resolved through explicit deterministic intervention rules and are intentionally representative, not forecasts.
 - **Don't:** Add a chatbot, purple gradient, fake AI claim, or random live-looking number.
 - **Don't:** Hide core behavior inside a modal or rely on color alone to communicate status.
+
+## Data and prediction layers
+
+RIPPLE presents three distinct layers in sequence: normalized campus-twin inputs, a local neural predictive layer, and deterministic intervention outcomes. Campus signals are compact source metadata and linked entity records, not an administrative CRUD surface. Before a run, predictive cards expose the deterministic rule preview. During and after a run, the same cards consume the exported local MLP's forward-pass outputs, while the deterministic scenario engine remains the authority for causal snapshots and benchmark values. Model details disclose synthetic training, held-out evaluation, local inference, uncertainty and the fallback path. Prediction never chooses the recommendation; decision analysis remains the owner of intervention ranking and explainability.
+
+The visual signature for this layer is a quiet source grid and a five-signal forecast strip. Keep both subordinate to the scenario and ripple system. Use the labels “Prototype campus signals”, “Deterministic forecast”, and “Synthetic prototype signals” wherever a reader could otherwise infer live telemetry.
+
+## Scenario builder
+
+The builder is action-oriented: the selected scenario type determines which target field appears. Building closure owns a building select; transport, weather, event, and infrastructure scenarios use their target readout and expose only relevant duration/severity controls. Every summary, target, time window, affected-system list, and expected signal is derived from the current `Scenario` object.
 
 ## Focus disclosure rules
 

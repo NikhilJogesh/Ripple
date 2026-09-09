@@ -95,4 +95,36 @@ test.describe("RIPPLE Decision Mode", () => {
     const [scrollWidth, viewportWidth] = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth])
     expect(scrollWidth).toBeLessThanOrEqual(viewportWidth)
   })
+
+  test("explores, backtracks, compares, reviews, and resets alternate futures", async ({ page }) => {
+    await openDecision(page)
+    await completeBranch(page, /Dynamic Reallocation future/)
+    await expect(page.getByTestId("decision-history")).toContainText("Explored futures")
+    await page.getByRole("button", { name: /Try another path/ }).click()
+
+    await completeBranch(page, /Do Nothing future/)
+    await expect(page.getByTestId("decision-compare")).toContainText("Estimated cost")
+    await expect(page.getByTestId("decision-compare")).toContainText("₹18K")
+    await expect(page.getByTestId("human-review")).toContainText("READY FOR HUMAN REVIEW")
+
+    await page.getByTestId("decision-branch-dynamic-reallocation").getByRole("button", { name: /Dynamic Reallocation future/ }).click()
+    await page.getByTestId("human-review").getByRole("button", { name: "Open Operations" }).click()
+    await expect(page.getByTestId("selected-future-banner")).toContainText("Dynamic Reallocation")
+    await expect(page.getByTestId("selected-future-banner")).toContainText("PROJECTED OUTCOME")
+
+    await page.locator('nav[aria-label="RIPPLE view mode"] a[href="/sandbox?view=decision"]').click()
+    await expect(page.getByTestId("decision-history").getByRole("button", { name: /Dynamic Reallocation/ })).toBeVisible()
+    await page.getByRole("button", { name: "Reset session" }).click()
+    await expect(page.getByTestId("human-review")).toHaveCount(0)
+    await expect(page.getByTestId("decision-history")).toContainText("Not explored")
+  })
+
+  test("expands a modeled ripple node with its causal evidence", async ({ page }) => {
+    await page.goto("/sandbox?view=operations")
+    const roomPressure = page.locator(".ripple-node").filter({ hasText: "Room Pressure" }).first()
+    await roomPressure.click()
+    await expect(roomPressure).toHaveAttribute("aria-expanded", "true")
+    await expect(roomPressure).toContainText("WHAT CHANGED / WHY")
+    await expect(roomPressure).toContainText("82% baseline")
+  })
 })

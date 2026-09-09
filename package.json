@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "train:neural": "vite-node --config vitest.config.ts scripts/generate_neural_dataset.ts && python3 scripts/train_neural_model.py"
   },
   "dependencies": {
     "next": "16.3.4",

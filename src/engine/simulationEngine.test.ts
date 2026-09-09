@@ -56,4 +56,13 @@ describe("RIPPLE simulation engine", () => {
       expect(result.snapshots.at(-1)?.metrics.campusStability).toBeGreaterThanOrEqual(0)
     }
   })
+
+  it("uses scenario-native event narratives for power and examination demand", () => {
+    const power = runSimulation(scenarioPresets.find((preset) => preset.id === "power-grid-disruption")!.scenario)
+    const examination = runSimulation(scenarioPresets.find((preset) => preset.id === "examination-period-surge")!.scenario)
+    expect(power.events.map((event) => event.title)).toEqual(expect.arrayContaining(["Power availability constrained", "Facility capacity degraded"]))
+    expect(examination.events.map((event) => event.title)).toEqual(expect.arrayContaining(["Exam demand surge active", "Exam sessions competing"]))
+    expect(power.snapshots.at(-1)?.metrics.transportLoad).toBeGreaterThan(64)
+    expect(examination.snapshots.at(-1)?.metrics.roomUtilization).toBeGreaterThan(82)
+  })
 })

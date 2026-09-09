@@ -1,6 +1,7 @@
 "use client"
 
 import type { ScenarioPreset } from "@/types"
+import { focusScenarioConfiguration } from "@/lib/scenarioConfiguration"
 
 type ScenarioLibraryProps = {
   presets: ScenarioPreset[]
@@ -20,7 +21,7 @@ export function ScenarioLibrary({ presets, activePresetId, onSelect }: ScenarioL
         {presets.map((preset) => <button className={`scenario-card ${preset.id === activePresetId ? "selected" : ""}`} type="button" key={preset.id} aria-pressed={preset.id === activePresetId} onClick={() => onSelect(preset)}>
           <span className="scenario-card-category">{preset.category}</span>
           <span className="scenario-card-name">{preset.name}</span>
-          <span className="scenario-card-meta">{preset.target} / {preset.durationHours}H / {preset.severity}% severity</span>
+          <span className="scenario-card-meta">{preset.target} / {preset.durationHours}H / {focusScenarioConfiguration(preset.scenario).severityLabel.toLowerCase()} {preset.severity}%</span>
           <span className="scenario-card-description">{preset.description}</span>
           <span className="scenario-card-action">{preset.id === activePresetId ? "LOADED" : "LOAD SCENARIO"} <span>→</span></span>
         </button>)}

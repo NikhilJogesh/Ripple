@@ -140,6 +140,28 @@ export const scenarioPresets: ScenarioPreset[] = [
     description: "Interrupt shared infrastructure and observe the dependency chain.",
     scenario: { buildingId: "innovation-hub", condition: "close", durationHours: 3, startTime: "10:00", severity: 66, affectedSystems: ["classes", "faculty", "students"], kind: "network-disruption", category: "CAPACITY", label: "Network / Infrastructure Disruption", targetLabel: "Campus network", presetId: "network-disruption" },
   },
+  {
+    id: "power-grid-disruption",
+    name: "Power / Grid Disruption",
+    category: "INFRASTRUCTURE",
+    target: "Central power loop",
+    durationHours: 4,
+    severity: 78,
+    affectedSystems: ["classes", "rooms", "students", "faculty", "transport"],
+    description: "Constrain a shared power loop and trace how facility capacity changes the campus response.",
+    scenario: { buildingId: "tt-block", condition: "close", durationHours: 4, startTime: "10:00", severity: 78, affectedSystems: ["classes", "rooms", "students", "faculty", "transport"], kind: "power-disruption", category: "INFRASTRUCTURE", label: "Power / Grid Disruption", targetLabel: "Central power loop", presetId: "power-grid-disruption" },
+  },
+  {
+    id: "examination-period-surge",
+    name: "Examination Period Surge",
+    category: "OPERATIONS",
+    target: "Examination period",
+    durationHours: 8,
+    severity: 76,
+    affectedSystems: ["classes", "rooms", "students", "faculty", "transport"],
+    description: "Increase assessment demand and observe how room, schedule and mobility pressure compound.",
+    scenario: { buildingId: "tt-block", condition: "close", durationHours: 8, startTime: "09:00", severity: 76, affectedSystems: ["classes", "rooms", "students", "faculty", "transport"], kind: "examination-surge", category: "OPERATIONS", label: "Examination Period Surge", targetLabel: "Examination period", presetId: "examination-period-surge" },
+  },
 ]
 
 export const defaultScenario = scenarioPresets[0].scenario

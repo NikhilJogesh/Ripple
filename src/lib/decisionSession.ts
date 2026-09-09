@@ -1,9 +1,14 @@
 import { calculateDecisionScore } from "@/engine/decisionScore"
-import { deriveInterventionCandidate, derivedDecisionCandidates } from "@/engine/interventionRules"
+import { decisionCandidatesForScenario, deriveInterventionCandidate, derivedDecisionCandidates } from "@/engine/interventionRules"
+import { defaultScenario } from "@/data/mockData"
 import { classifyRoomPressure, classifyTransportPressure } from "@/engine/rules"
-import type { CampusMetrics, DecisionBranch, DecisionBranchResult, DecisionCandidate, DecisionSession } from "@/types"
+import type { CampusMetrics, DecisionBranch, DecisionBranchResult, DecisionCandidate, DecisionSession, Scenario } from "@/types"
 
 export const decisionOptionCandidates = derivedDecisionCandidates.filter((candidate) => ["do-nothing", "dynamic-reallocation", "temporary-rooms"].includes(candidate.id))
+
+export function decisionOptionCandidatesForScenario(scenario: Scenario = defaultScenario): DecisionCandidate[] {
+  return decisionCandidatesForScenario(scenario).filter((candidate) => ["do-nothing", "dynamic-reallocation", "temporary-rooms"].includes(candidate.id))
+}
 
 const rootId = "scenario-root"
 
@@ -11,9 +16,9 @@ export function branchIdForCandidate(candidateId: DecisionCandidate["id"]): stri
   return `decision-${candidateId}`
 }
 
-export function createDecisionSession(): DecisionSession {
+export function createDecisionSession(scenario: Scenario = defaultScenario): DecisionSession {
   return {
-    branches: decisionOptionCandidates.map((candidate): DecisionBranch => ({
+    branches: decisionOptionCandidatesForScenario(scenario).map((candidate): DecisionBranch => ({
       id: branchIdForCandidate(candidate.id),
       parentId: rootId,
       candidateId: candidate.id,
@@ -24,8 +29,8 @@ export function createDecisionSession(): DecisionSession {
   }
 }
 
-export function decisionResultForCandidate(candidate: DecisionCandidate): DecisionBranchResult {
-  const resolvedCandidate = deriveInterventionCandidate(candidate)
+export function decisionResultForCandidate(candidate: DecisionCandidate, scenario?: Scenario): DecisionBranchResult {
+  const resolvedCandidate = scenario ? candidate : deriveInterventionCandidate(candidate)
   const score = calculateDecisionScore(resolvedCandidate)
   return {
     score: score.score,
@@ -36,6 +41,7 @@ export function decisionResultForCandidate(candidate: DecisionCandidate): Decisi
     stability: resolvedCandidate.stability,
     roomUtilization: resolvedCandidate.roomUtilization,
     transportLoad: resolvedCandidate.transportLoad,
+    operationalCost: resolvedCandidate.operationalCost,
   }
 }
 
@@ -49,6 +55,7 @@ export function applyDecisionResultToMetrics(metrics: CampusMetrics, result: Dec
     roomUtilization: result.roomUtilization,
     transportLoad: result.transportLoad,
     transportImpact: result.transportLoad,
+    estimatedOperationalCost: result.operationalCost,
     roomPressure: classifyRoomPressure(result.roomUtilization),
     transportPressure: classifyTransportPressure(result.transportLoad),
   }
@@ -74,16 +81,16 @@ export function markDecisionBranchRunning(session: DecisionSession, branchId: st
   }
 }
 
-export function markDecisionBranchComplete(session: DecisionSession, branchId: string): DecisionSession {
+export function markDecisionBranchComplete(session: DecisionSession, branchId: string, scenario: Scenario = defaultScenario): DecisionSession {
   const branch = session.branches.find((item) => item.id === branchId)
   if (!branch) return session
-  const candidate = decisionOptionCandidates.find((item) => item.id === branch.candidateId)
+  const candidate = decisionOptionCandidatesForScenario(scenario).find((item) => item.id === branch.candidateId)
   if (!candidate) return session
   return {
     ...session,
     activeBranchId: branchId,
     selectedBranchIds: session.selectedBranchIds.includes(branchId) ? session.selectedBranchIds : [...session.selectedBranchIds, branchId],
-    branches: session.branches.map((item) => item.id === branchId ? { ...item, status: "complete", result: decisionResultForCandidate(candidate) } : item),
+    branches: session.branches.map((item) => item.id === branchId ? { ...item, status: "complete", result: decisionResultForCandidate(candidate, scenario) } : item),
   }
 }
 

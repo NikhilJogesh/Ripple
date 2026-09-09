@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
-import { decisionCandidates } from "@/data/mockData"
+import { decisionCandidates, scenarioPresets } from "@/data/mockData"
 import { classifyRoomPressure, classifyTransportPressure } from "@/engine/rules"
-import { deriveInterventionCandidate, derivedDecisionCandidates, interventionRules } from "@/engine/interventionRules"
+import { decisionCandidatesForScenario, deriveInterventionCandidate, derivedDecisionCandidates, interventionRules } from "@/engine/interventionRules"
 import { decisionOptionCandidates, decisionResultForCandidate } from "@/lib/decisionSession"
 
 describe("deterministic intervention rules", () => {
@@ -47,5 +47,21 @@ describe("deterministic intervention rules", () => {
     const first = derivedDecisionCandidates.map((candidate) => decisionResultForCandidate(candidate))
     const second = derivedDecisionCandidates.map((candidate) => decisionResultForCandidate(candidate))
     expect(JSON.stringify(first)).toBe(JSON.stringify(second))
+  })
+
+  it("derives scenario-specific futures while preserving intervention ordering", () => {
+    for (const id of ["power-grid-disruption", "examination-period-surge"]) {
+      const scenario = scenarioPresets.find((preset) => preset.id === id)!.scenario
+      const first = decisionCandidatesForScenario(scenario)
+      const second = decisionCandidatesForScenario(scenario)
+      expect(JSON.stringify(first)).toBe(JSON.stringify(second))
+      const nothing = first.find((candidate) => candidate.id === "do-nothing")!
+      const dynamic = first.find((candidate) => candidate.id === "dynamic-reallocation")!
+      const rooms = first.find((candidate) => candidate.id === "temporary-rooms")!
+      expect(dynamic.affectedStudents).toBeLessThan(rooms.affectedStudents)
+      expect(rooms.affectedStudents).toBeLessThan(nothing.affectedStudents)
+      expect(dynamic.stability).toBeGreaterThan(rooms.stability)
+      expect(dynamic.mechanism?.toLowerCase()).toContain(id === "power-grid-disruption" ? "power" : "exam")
+    }
   })
 })
